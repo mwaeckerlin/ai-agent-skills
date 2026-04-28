@@ -66,7 +66,7 @@ parameters:
   labels: ["automated", "copilot"]
 ```
 
-##3 Step 2: Assign Copilot (mandatory)
+### Step 2: Assign Copilot (mandatory)
 
 **Important:** @copilot mention alone is not enough — you must also assign Copilot as an assignee:
 
@@ -125,7 +125,7 @@ delivery:
 4. **If a PR exists:**
    - Proceed to Step 5: Review PR
 
-##3 Step 5: PR Review Process
+### Step 5: PR Review Process
 
 **When linkedPullRequests.nodes.length > 0:**
 
@@ -185,7 +185,7 @@ parameters:
 - Return to Step 4 (monitoring)
 - Continue until implementation is satisfactory
 
-##3 Step 7: Final Telegram Notification
+### Step 7: Final Telegram Notification
 
 **Send ONLY after Step 5.5 (Approval Comment) is complete:**
 
