@@ -31,7 +31,7 @@ When the user requests an issue creation in a specific project:
 
 ### 🚨 RULE #2: TELEGRAM MESSAGE - ONLY WHEN FINISHED
 
-**Telegram message ONLY when COMPLETION!**
+**Send a Telegram message ONLY upon COMPLETION!**
 
 **DURING MONITORING:**
 - NO Telegram message during intermediate checks
@@ -48,7 +48,7 @@ When the user requests an issue creation in a specific project:
 Required tools and capabilities:
 - `mcp-github` skill for GitHub operations
 - `openclaw-mcp-gateway` for cron job management
-- Telegram integration - MUST WORK!
+- Telegram integration (must be configured and operational)
 
 ## Workflow
 
@@ -87,12 +87,12 @@ parameters:
 name: "copilot-monitor-<issue-id>-1" # Unique name
 schedule:
   kind: "at"
-  at: "2026-04-28T10:10:00Z" # 10 minutes from now
+  at: "<current_datetime + 10 minutes>"  # 10 minutes from now
 sessionTarget: "isolated"
 wakeMode: "now"
 payload:
   kind: "agentTurn"
-  message: "Copilot monitoring for Issue <issue-id>. SILENT CHECK!"
+  message: "Check Copilot status for issue #<issue-id>. Perform a silent status check — do not send any Telegram notification."
 delivery:
   mode: "none"  # NO Telegram message!
 ```

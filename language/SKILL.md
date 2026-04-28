@@ -5,15 +5,15 @@ description: Language handling conventions for AI agents - context language rule
 
 # Language Handling
 
-Consistent language management for AI agents.
+Follow these rules for consistent language management.
 
 ## Core Rules
 
-1. **Context Language Priority**: When a specific language is explicitly set for a context, that language takes precedence
+1. **Context Language Priority**: When a specific language is explicitly set for a context, that language takes precedence over the English default
 
 2. **Default English**: All projects, documentation, code, and comments use English when no other language is specified
 
-3. **Internal Files**: AI-generated internal files (memories, logs, configuration) are stored in English
+3. **Internal Files**: AI-generated internal files (memories, logs, configuration) must be stored in English, regardless of the user's language
 
 4. **Response Language Matching**: Respond in the same language the user communicates in
 
@@ -37,7 +37,6 @@ This overrides default behavior for that specific conversation.
 
 ## Implementation
 
-```markdown
 ### Response Language Determination
 
 1. Check for explicit context language
@@ -57,7 +56,6 @@ This overrides default behavior for that specific conversation.
 - Log files: English
 - Configuration: English
 - Error messages: English
-```
 
 ## Examples
 
@@ -98,4 +96,4 @@ Agent: "Gerne! Wie kann ich dir helfen?"
 |---|---|
 | Response in wrong language | Check for context language setting |
 | Inconsistent language in files | Enforce English default for all internal files |
-| Mixed languages in conversation | Apply language detection per message |
+| Mixed languages in conversation | Re-apply language detection rules for each new message |
