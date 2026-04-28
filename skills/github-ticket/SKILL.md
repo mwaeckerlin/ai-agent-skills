@@ -66,7 +66,7 @@ parameters:
   labels: ["automated", "copilot"]
 ```
 
-### Step 2: Assign Copilot (mandatory)
+##3 Step 2: Assign Copilot (mandatory)
 
 **Important:** @copilot mention alone is not enough — you must also assign Copilot as an assignee:
 
@@ -125,7 +125,7 @@ delivery:
 4. **If a PR exists:**
    - Proceed to Step 5: Review PR
 
-### Step 5: PR Review Process
+##3 Step 5: PR Review Process
 
 **When linkedPullRequests.nodes.length > 0:**
 
@@ -143,10 +143,29 @@ delivery:
 3. **Decision:**
    
    **If implementation is good:**
-   - Proceed to Step 7: Send Telegram
+   - Proceed to Step 5.5: Write Approval Comment
+   - THEN proceed to Step 7: Send Telegram
    
    **If implementation needs improvement:**
    - Proceed to Step 6: Provide Feedback
+
+### Step 5.5: Write Approval Comment (MANDATORY!)
+
+**CRITICAL: This MUST be done BEFORE sending Telegram!**
+
+**Comment on the PR without @copilot mention:**
+
+```
+operationId: "issues/create-comment"
+parameters:
+  owner: <owner>
+  repo: <repo>
+  issue_number: <PR number>
+  body: "**Implementation Review Complete**\n\nReviewed components:\n- Code quality: <assessment>\n- Requirements: <assessment>\n- Tests: <assessment>\n\nReady for merge."
+```
+
+**VERIFY the comment was posted successfully.**
+**If comment fails: DO NOT proceed to Step 7. Retry or notify user.**
 
 ### Step 6: Provide PR Feedback
 
@@ -166,9 +185,11 @@ parameters:
 - Return to Step 4 (monitoring)
 - Continue until implementation is satisfactory
 
-### Step 7: Final Telegram Notification
+##3 Step 7: Final Telegram Notification
 
-**Send only when the PR is reviewed and the implementation is satisfactory:**
+**Send ONLY after Step 5.5 (Approval Comment) is complete:**
+
+**CRITICAL: Do NOT send Telegram if approval comment was not posted!**
 
 **Method 1: Direct Session Message:**
 ```
