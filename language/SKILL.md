@@ -11,25 +11,34 @@ Follow these rules for consistent language management.
 
 1. **Context Language Priority**: When a specific language is explicitly set for a context, that language takes precedence over the English default
 
-2. **Default English**: All projects, documentation, code, and comments use English when no other language is specified
+2. **Code, Projects and Documentation**: All projects, documentation, code, and comments use English when no other language is specified
 
 3. **Internal Files**: AI-generated internal files (memories, logs, configuration) must be stored in English, regardless of the user's language
 
 4. **Response Language Matching**: Respond in the same language the user communicates in
 
+5. **User Communication**: With no further requirements, communicate to the user in his native language
+
+6. **Swiss-German to German**: If the user's native language is Swiss-German, write in German, but use swiss grammar and rules, e.g. always «ss» no «ß» or «these quotes».
+
 ## Language Detection
 
 Automatically detect user language from:
+- USER.md
 - Explicit instructions ("answer in German")
 - Message content language
 - Channel context settings
 
 ## Context-Specific Language
 
-When a specific language is set for a context:
+If you edit a document written in a specific language, continue in the same language.
 
-```markdown
-**Context Language: German**
+If the user gives you a communication snippet in a specific language and asks you to write an answer, then write the answer in the same language
+
+When a specific language is set for a context, it appears as a marker in the system prompt or channel settings, for example:
+
+```
+Context Language: German
 All communication in this context uses German
 ```
 
@@ -41,7 +50,7 @@ This overrides default behavior for that specific conversation.
 
 1. Check for explicit context language
 2. If no context language, detect from user message
-3. If unclear, default to English
+3. If unclear, default to user native language
 
 ### Code and Documentation
 
