@@ -101,62 +101,98 @@ delivery:
 
 **IN EVERY MONITORING CHECK:**
 
-1. **Check Copilot status:**
-   - Is issue closed?
-   - Are there pull requests?
-   - Are there commits?
+1. **Check Issue Status with issues/get API:**
+   ```
+   operationId: "issues/get"
+   parameters: { owner, repo, issue_number }
+   ```
 
-2. **If NOT FINISHED:**
+2. **Determine Copilot Status:**
+   
+   **COPILOT HAS CREATED PR when:**
+   - `data.linkedPullRequests.nodes.length > 0`
+   - This means Copilot finished initial work
+   
+   **COPILOT NOT FINISHED when:**
+   - `data.linkedPullRequests.nodes.length === 0`
+   - Keep monitoring
+
+3. **If NOT FINISHED (no PR yet):**
    - CREATE NEW 10-MINUTE TIMER
    - Use unique names (-2, -3, etc.)
    - NEVER STOP!
 
-3. **If FINISHED:**
-   - Review implementation
-   - SEND TELEGRAM MESSAGE
+4. **If PR EXISTS:**
+   - Proceed to Step 5: Review PR
 
-### Step 5: Implementation Review (When Finished)
+### Step 5: PR Review Process
 
-1. **Analyze changes**
-2. **Assess quality**
+**When linkedPullRequests.nodes.length > 0:**
+
+1. **Get PR Details:**
+   ```
+   Get first PR from linkedPullRequests.nodes[0]
+   PR number: data.linkedPullRequests.nodes[0].number
+   ```
+
+2. **Review PR Implementation:**
+   - Check code quality
+   - Verify requirements met
+   - Assess completeness
+
 3. **Decision:**
-   - Good: SEND TELEGRAM MESSAGE
-   - Needs improvement: Provide feedback
+   
+   **If Implementation is GOOD:**
+   - Proceed to Step 7: Send Telegram
+   
+   **If Implementation needs IMPROVEMENT:**
+   - Proceed to Step 6: Provide Feedback
 
-### Step 6: Provide Feedback (If needed)
+### Step 6: Provide PR Feedback
+
+**Comment on the PR (NOT the issue):**
 
 ```
 operationId: "issues/create-comment"
 parameters:
-  body: "@copilot \n\nImplementation reviewed and found issues:\n\n1. <Specific issue 1>\n2. <Specific issue 2>\n\nPlease address these points."
+  owner: <owner>
+  repo: <repo>
+  issue_number: <PR number>
+  body: "@copilot\n\nImplementation review feedback:\n\n1. <Specific issue 1>\n2. <Specific issue 2>\n\nPlease address these points."
 ```
 
-**AFTER FEEDBACK:** SET NEXT 10-MINUTE TIMER!
+**AFTER FEEDBACK:**
+- SET NEW 10-MINUTE TIMER
+- Return to Step 4 (monitoring)
+- Continue until implementation is satisfactory
 
-### Step 7: FINAL TELEGRAM MESSAGE (ONLY WHEN COMPLETE!)
+### Step 7: FINAL TELEGRAM NOTIFICATION
 
-**Only when Copilot is finished and everything is good:**
+**Send ONLY when PR is reviewed and implementation is satisfactory:**
 
-**Method 1: Specific Session:**
+**Method 1: Direct Session Message:**
 ```
 sessions_send(
   sessionKey: "agent:main:telegram:direct:1196751676",
-  message: "🚀 GitHub Issue finished!\n\nProject: <owner>/<repo>\nIssue: #<issue-id> - <title>\nStatus: Copilot finished\n\nReady for your final review!"
+  message: "✅ GitHub Issue READY for your review!\n\nProject: <owner>/<repo>\nIssue: #<issue-id> - <title>\nPR: #<pr-number>\n\nCopilot implementation reviewed and approved.\nReady for your final review and merge!"
 )
 ```
 
-**Fallback if Method 1 fails:**
+**Method 2: Spawn if Method 1 fails:**
 ```
 sessions_spawn(
   mode: "run",
-  task: "Send Telegram message: <message>"
+  task: "Send Telegram: Issue <issue-id> ready for review"
 )
 ```
 
-**Last resort:**
-- Write notification in repo file
-- Let user know it's finished
-- NEVER GIVE UP!
+**Method 3: Write notification file:**
+```
+Write to: NOTIFICATION.md
+Content: Issue #<id> ready for review at <timestamp>
+```
+
+**ENSURE TELEGRAM IS SENT - TRY ALL METHODS!**
 
 ## MONITORING LOGIC EXAMPLE
 
