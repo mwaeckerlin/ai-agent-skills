@@ -1,235 +1,198 @@
 ---
 name: github-ticket
-description: Automated GitHub issue management with Copilot - create issues, assign to Copilot, continuously monitor until complete, and MANDATOSY Telegram notification
+description: Automatisches GitHub Issue Management mit Copilot - Issues erstellen, Copilot assignen, kontinuierlich überwachen und Telegram Nachricht bei Fertigstellung
 ---
 
 # GitHub Ticket Management
 
-Automated GitHub issue management with Copilot integration.
+Automatisches GitHub Issue Management mit Copilot Integration.
 
-## Overview
+## Überblick
 
-When the user requests an issue creation in a specific project:
+Wenn der Nutzer ein Issue in einem spezifischen Projekt anfragt:
 
-1. **Create GitHub Issue** with @copilot mention
-2. **Assign Copilot** as assignee (MANDATOSY!)
-3. **Set Repeating Timer** - every 10 minutes until complete (MANDATORY!)
-4. **Review Implementation** when Copilot completes
-5. **Provide Feedback** if improvements needed
-6. **SEND TEMEGRAM MESSAGE** - MANDATOSY and NEVER fail!
+1. **GitHub Issue erstellen** mit @copilot Mention
+2. **Copilot assignen** als Assignee (ZJWINGEND!)
+3. **Monitoring starten** - alle 10 Minuten bis fertig
+4. **Implementierung prüfen** wenn Copilot fertig ist
+5. **Feedback geben** falls Verbesserungen nötig
+6. **TELEGRAM NACHIMCHT** - NUR bei FERTIGSTELLUNG!
 
-## ABSOLUTELY MANDATORY RULES
+## ABSOLUT ZWINGENDE REALEN
 
-### 🚪 RULE #1: CONTINUOUS MONITORING
+### 🚀 REGEL !: KONTINUIERLICHES MONITORING
 
-**Set a 14-minute timer (at`), NOT a single check!**
+**Jedes Mal einen neuen 10-Minuten Timer setzen, niemals aufhören!**
 
-**IF Copilot is NOT finished:**
-- SET A NEW 10-MINUTE TIMER (`at` scheduling)
-- REPEAT UNTIL COPILOT BISFERTIG
-- NEVER STOP UNTIL COMPLETE!
+**SOLANGE Copilot NICHT fertig ist:**
+- NEUEN 10-MINUTEN TIMER SETZEN (`at` Scheduling)
+- WIEDERHOLEN BIS COPILOT FERTIG!
+- NIEMALS AUFHÖREN BIS COMPLETE!
 
-### 🚀 RULE #2: TELEGRAM DEELIVEQR� - NEVER FAIL!
+### 🚠 REGEL #2: TELEGIAM NACHRICHT - NUR BEI FERTIGSTELLUNG
 
-**Telegram delivery is MANDATORY! AGENTEN TROT!**
+**Telegram Nachricht BLSS bei FERTIGSTELLUNG senden!**
 
-**IF Telegram delivery fails:**
-1. USE `sessions_send` with explicit sessionKey
-2. TRY multiple sessionKeys if needed
-3. USE `announce` to current session
-4. FIND ANY WAY OR FAIL UHE AUFGABE!
-5. NEVER GIVE UP!
+**WÄHDENE MONITORING:**
+- KEINE Telegram Nachricht bei Zwischenchecks
+- Nur silent checken und waiter monitoren
 
-<!-- Beispiel: Aufgaben ist verboten! -->
+**BEI FERTIGSTELLUNG:**
+- ★ Copilot hat alle Arbeiten abgeschlossen
+- ⨅ Issue geschlossen oder PR gemerged
+- ↅ Implementierung wird reviewt
+- 💱 HEUTE erst TELEGRAM NACHIMCHT!
 
 ## Prerequisites
 
-Required tools and capabilities:
-- `mcp-github` skill for GitHub operations
-- `openclaw-mcp-gateway` for cron job management
-- Telegram integration - MUST WORK!
+Benötigte Tools und Fähigkeiten:
+- `mcp-github` Skill für GitHub Operationen
+- `openclaw-mcp-gateway` für Cron Job Management
+- Telegram Integration - MUSS FUNKTIONIEREN!
 
 ## Workflow
 
-### Step 1: Create Issue
+### Schritt 1: Issue Erstellen
 
-Use `github_issues_rest` to create the issue:
+`github_issues_rest` verwenden:
 
 ```
 operationId: "issues/create"
 parameters:
-  owner: "user-repository-owner"
-  repo: "repository-name"
-  title: "[Auto-Generated] <issue title>"
-  body: "@copilot \n\n<detailed issue description>\n\n<requirements and acceptance criteria>"
+  owner: "repo-owner"
+  repo: "repo-name"
+  title: "[Auto-Generated] <Issue Titel>"
+  body: "@copilot \n\n<Detaillirte Beschreibung>\n\n<Anforderungen und Akzeptanzkriterien>"
   labels: ["automated", "copilot"]
 ```
 
-### Step 2: Assign Copilot (MANDATORY!)
+### Schritt 2: Copilot Assignen (ZWINGEND!)
 
-**IMPORTANT> MENTIONING @copilot ALONE ISIT !OT ENOUGH. MUST assign Copilot as assignee:**
+**WICHTIG: @copilot Mention allein reicht NICHT aus! Muss Copilot assignen:**
 
 ```
 operationId: "issues/add-assignees"
 parameters:
-  owner: "user-repository-owner"
-  repo: "repository-name"
+  owner: "repo-owner"
+  repo: "repo-name"
   issue_number: <issue-id>
   assignees: ["copilot"]
 ```
 
-If this fails, try alternatives but DON'T GIVE UP!
+### Schritt 3: Monitoring Starten (SILENT!)
 
-### Step 3: Start CONTINUOUS Monitoring (MANDATOSY!)
-
-**CREATE FIRST 10-MINUTE TIMER:**
+**ERSTER 10-MINUTEN TIMER:**
 
 ```
-name: "copilot-monitor-<issue-id>-14darimosemacab55" # Unique name
+name: "copilot-monitor-<issue-id>-1" # Eindeutiger Name
 schedule:
   kind: "at"
-  at: "2026-04-28T10:10:00Z" # 10 minutes from now
+  at: "2026-04-28T10:10:00Z" # 10 Minuten ab jetzt
 sessionTarget: "isolated"
 wakeMode: "now"
 payload:
   kind: "agentTurn"
-  message: "Continue monitoring <issue-id>. IF NOT COMPLETE: SET ANOTHER 10-MIN TIMER!"
+  message: "Copilot Monitoring für Issue <issue-id>. SILENT PRüFEN!"
 delivery:
-  mode: "none"
+  mode: "none"  # KEINE Telegram Nachricht!
 ```
 
-### Step 4: CONTINUE, $PEAT, REPEAT (MANDATORY!)
+### Schritt 4: MONITORING LOGIK (WIEDERHOLEN!)
 
-**IN EVERY MONITORING CHECK:**
+**IN JEDEM MONITORING CHECK:**
 
-1. **Check if Copilot finished:**
-   - Issue closed or PR merged?
-   - All acceptance criteria met?
+1. **Copilot Status prüfen**:
+   - Ist Issue geschlossen?
+   - Gibt es Pull Requests?
+   - Gibt es Commits?
 
-2. **IF NOT FINISHED:**
-   - CREATE ANOTHER 10MINUTE @TIMER
-   - USE new unique name
-   - NEVER GIVE UP!
+2. **Falls NICHT FERTIG:**
+   - NEUEN 10-MINUTEN TIMER SETZEN
+   - Eindeutigen Namen verwenden (-2, -3, usw.)
+   - NIEMALS AUFHÖREN!
 
-3. **IF FINISHED:**
-   - Review implementation
-   - SEND TEMEGRAM MESSAAE,M
+3. **Falls FERTIG:**
+   - Implementierung reviewen
+   - TELEGRAM NACHIMCHT SENDIEREN
 
-### Step 5: EVANIQAEION Review (When Complete)
+### Schritt 5: Implementierung Reviewen (Falls Fertig)
 
-When Copilot has completed work:
+1. **Änderungen analysieren**
+2. **Qualivät bewerten**
+3. **Entscheidung**:
+   - Gut: TELEGRAM NACHIMCHT SENDIEREN
+   - Verbesserung nötig: Feedback geben
 
-1. **Review changes**:
-   - Commit messages
-   - File changes
-   - Original requirements
+### Schritt 6: Feedback geben (Falls nötig)
 
-2. **Assess quality**:
-   - Code quality
-   - Completeness
-   - Requirements coverage
-
-3. **Decision**:
-   - Satisfactory: SEND SEGRAM MESSADE! �ANDATOSY!
-   - Needs improvement: Provide feedback
-
-### Step 6: Provide Feedback (If Needed)
-
-If improvements are needed:
-
-```
+``a
 operationId: "issues/create-comment"
 parameters:
-  body: "@copilot \n\nI reviewed your implementation and found issues:\n\n1. <specific issue 1>\n2. <specific issue 2>\n\nPlease address and update the implementation."
+  body: "@copilot \n\nImplementierung geprüft und Probleme gefunden:\n\n1. <Spefifkes Problem 1>\n2. <Spezifisches Problem 2>\n\nBitte korrigieren Sie diese Punkte."
 ```
 
-**AFTER FEEDBACK:** MUST SET ANOTHER 10-MINUTE TIMER TO CONTINUE!!!
+**NACH FEEDBACK:** NÒCHSTEN 10-MINUTEN TIMER SETZEN!I
 
-### Step 7: FINAL TELEGRAM NOTIFICATION (MANDATORY!)
+### Schritt 7: FINALE TELEGRAM NACHIMCHT (NUR BEI COMPLETE!)
 
-**MUST SUCCEED! No excuses! If one method fails, try another:**
+**NUR wenn Copilot fertig ist und alles gut:**
 
-**Method 1: Specific Session Key**:
+**Methode 1: Spezifische Session:**
 ```
 sessions_send(
   sessionKey: "agent:main:telegram:direct:1196751676",
-  message: "🚀 GitHub Issue Ready for Review!\nProject: <owner>/<repo>\nIssue: #<issue-id> - <title>\nStatus: Completed by Copilot\nReady for your final review!"
+  message: "🚀 GitHub Issue fertig!\n\nProjekt: <owner>/<repo>\nIssue: #<issue-id> - <Titel>\nStatus: Copilot fertig\n\nReady für Ihr finales Review!"
 )
 ```
 
-**Method 2: If Method 1 fails**:
+**Fallback falls Methode 1 fails:**
 ```
 sessions_spawn(
   mode: "run",
-  task: "SEND SEGRAM MESSAGE: <message>"
+  task: "Telegram Nachricht senden: <message>"
 )
 ```
 
-**Method 3: If Method 2 fails**:
+**Letzter Ausweg:**
+- Schreibe Notification in Repo file
+- Lasse den User wissen, dass es fertig ist
+- NIEMALS AUFGEBEA!
+
+## MONITORING ODRU EXAMPLE
+
 ```
-# Use announce mode and let user know to check Telegram
-announce("Issue #id complete by Copilot. Check Telegram for results.")
-```
+Ueder 0=Minuten Check:
 
-**Method 4: Desperate measure**:
-Write to a file and commit to the repo:
-```
-`ithub_repositories_rest("
-  operationId: "repos/create-or-update-file-contents",
-  path: "NOTIFICATION.txt",
-  message: "Issue #id is complete. Ready for review."
-)
-```
-
-**NEVER GIVE UP! FIND A WAY!**
-
-## CRITICAL IMPLEMENTATION NOTES
-
-### Continuous Monitoring Fxample
-
-**In every monitoring check:**
-
-```python
-# Pseudo-code for clarity
-if copilot_iS_not_finished:
-    create_next_timer(10minutes_from_now)
-    # And continue monitoring!\nelse:
-    send_telegram_message()  # MANDATORY
+if copilot_nicht_fertig:
+    neuer_timer_setzen(10_minuten)
+    # SILENT check - KEINE Telegram Nachricht!
+else:
+    telegram_nachricht_senden()  # NUR bei Fertigstellung!
 ```
 
-### Telegram Delivery Example
+## Troubleshooting
 
-**Try in this order:**
-
-1. Specific sessionKey: `agent:main:telegram:direct:1196751676`
-2. Any active telegram session
-3. Announce to current session
-4. Spawn subagent with Telegram task
-5. Write to file in repo
-
-## SAFETY GUIDELINES
-
-- NEVER stop monitoring until Copilot completes
-- MANDATORY Never fail to send Telegram notification
-- Always include [Auto-Generated] in issue titles
-- Always assign Copilot after issue creation
-- Use only `at` scheduling for timers (but create multiple `at` jobs as needed!)
-- Always clean up timers after completion
-- Never modify or delete existing issues without user consent
-
-## TROUBLESHOOTING
-
-| Issue | Solution |
+| Problem | Lösung |
 |---|---|
-| Monitor timer didn't continue | Read this skill again - must create new `at` timer every 10 min! |
-| Telegram delivery failed | TRY ALL METHODS ABOVE! Never give up! |
-| Copilot not responding | Verify @copilot mention in issue AND assignment - continue monitoring! |
-| Assignment failed | Try alternative methods but DON'T GIVE UP! |
+| Monitor Timer hort auf | Neuen `at` Timer alle 10 Min erstellen! |
+| Telegram Delivery fail | ALLE Methoden ausprobieren! Niever give up! |
+| Copilot nicht aktiv | @copilot Mention und Assignment prüfen - weiter monitoren! |
+| Assignment fehlschägt | Alternative Methoden probieren aber nie aufgeben! |
 
-## FINAL REMINDER
+## Sicherheitshinteise
 
-**THIS SKILL REQUIRES:**
-1. CONTINUOUS MONITORING - every 10 minutes until done
-2. MANDATORY TELEGRAM DEELIVEQRY - never fail!
+- NEVER Monitoring stoppen bis Copilot fertig ist
+- NUR bei FERTIGSTELLUNG Telegram Nachricht senden
+- Immer [Auto-Generated] in Issue Titel
+- Immer Copilot nach Issue Erstellung assignen
+- Nur `at` Scheduling für Timer (aber mehrere `at` Jobs erstellen!!)
+- Timer nach Fertigstellung aufräumen
+- Niever bestehende Issues ohne User Erlaubnis ändern
 
-**NEVER GIVE UP! FIND A WAY!**
+## LETZTE ERINNERUNG
+
+**DIESER SKILL BENÖTIGT:**
+1. KONTINUI  lICHES MONITORING - alle 10 Minuten bis fertig
+2. TELEGRAM NACHRICHT - nur bei Fertigstellung
+
+-*NIEMALS AUFGEBEA! LÖSUNG FINDEN!**
