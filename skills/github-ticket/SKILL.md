@@ -5,50 +5,50 @@ description: Automated GitHub issue management with Copilot - create issues, ass
 
 # GitHub Ticket Management
 
-Automated GitHub issue management with Copilot integration.
+Automate GitHub issue management with Copilot integration.
 
 ## Overview
 
-When the user requests an issue creation in a specific project:
+When the user requests issue creation in a specific project:
 
-1. **Create GitHub Issue** with @copilot mention
-2. **Assign Copilot** as assignee (MANDATORY!)
-3. **Start Monitoring** - every 10 minutes until complete
-4. **Review Implementation** when Copilot completes
-5. **Provide Feedback** if improvements needed
-6. **SEND TELEGRAM MESSAGE** - ONLY WHEN COMPLETE!
+1. **Create GitHub issue** with @copilot mention
+2. **Assign Copilot** as assignee (mandatory)
+3. **Start monitoring** — every 10 minutes until complete
+4. **Review implementation** when Copilot completes
+5. **Provide feedback** if improvements are needed
+6. **Send Telegram message** — only when complete
 
-## ABSOLUTELY MANDATORY RULES
+## Mandatory Rules
 
-### 🚨 RULE #1: CONTINUOUS MONITORING
+### Rule 1: Continuous Monitoring
 
-**Set a new 10-minute timer every time, never stop!**
+**Set a new 10-minute timer after every check — never stop.**
 
-**AS LONG AS Copilot is NOT finished:**
-- CREATE NEW 10-MINUTE TIMER (`at` scheduling)
-- REPEAT UNTIL COPILOT FINISHED!
-- NEVER STOP UNTIL COMPLETE!
+As long as Copilot is not finished:
+- Create a new 10-minute timer (`at` scheduling)
+- Repeat until Copilot is finished
+- Never stop before completion
 
-### 🚨 RULE #2: TELEGRAM MESSAGE - ONLY WHEN FINISHED
+### Rule 2: Telegram Message — Only When Finished
 
-**Telegram message ONLY when COMPLETION!**
+**Send a Telegram message only upon completion.**
 
-**DURING MONITORING:**
-- NO Telegram message during intermediate checks
-- Only silent check and continue monitoring
+During monitoring:
+- Do not send Telegram messages during intermediate checks
+- Perform a silent check and continue monitoring
 
-**WHEN FINISHED:**
+When finished (all of the following must be true):
 - ✅ Copilot has completed all work
-- ✅ Issue closed or PR merged
-- ✅ Implementation is reviewed
-- 📱 NOW send TELEGRAM MESSAGE!
+- ✅ Issue is closed or PR is merged
+- ✅ Implementation has been reviewed
+- 📱 Send Telegram message
 
 ## Prerequisites
 
 Required tools and capabilities:
 - `mcp-github` skill for GitHub operations
 - `openclaw-mcp-gateway` for cron job management
-- Telegram integration - MUST WORK!
+- Telegram integration (must be configured and operational)
 
 ## Workflow
 
@@ -66,9 +66,9 @@ parameters:
   labels: ["automated", "copilot"]
 ```
 
-### Step 2: Assign Copilot (MANDATORY!)
+### Step 2: Assign Copilot (mandatory)
 
-**IMPORTANT: @copilot mention alone is NOT enough! Must assign Copilot:**
+**Important:** @copilot mention alone is not enough — you must also assign Copilot as an assignee:
 
 ```
 operationId: "issues/add-assignees"
@@ -79,27 +79,27 @@ parameters:
   assignees: ["copilot"]
 ```
 
-### Step 3: Start Monitoring (SILENT!)
+### Step 3: Start Monitoring (silent)
 
-**FIRST 10-MINUTE TIMER:**
+**First 10-minute timer:**
 
 ```
 name: "copilot-monitor-<issue-id>-1" # Unique name
 schedule:
   kind: "at"
-  at: "2026-04-28T10:10:00Z" # 10 minutes from now
+  at: "<current_datetime + 10 minutes>"  # 10 minutes from now
 sessionTarget: "isolated"
 wakeMode: "now"
 payload:
   kind: "agentTurn"
-  message: "Copilot monitoring for Issue <issue-id>. SILENT CHECK!"
+  message: "Check Copilot status for issue #<issue-id>. Perform a silent status check — do not send any Telegram notification."
 delivery:
-  mode: "none"  # NO Telegram message!
+  mode: "none"  # No Telegram message
 ```
 
-### Step 4: MONITORING LOGIC (REPEAT!)
+### Step 4: Monitoring Logic
 
-**IN EVERY MONITORING CHECK:**
+**In every monitoring check:**
 
 1. **Check Issue Status with issues/get API:**
    ```
@@ -109,20 +109,20 @@ delivery:
 
 2. **Determine Copilot Status:**
    
-   **COPILOT HAS CREATED PR when:**
+   **Copilot has created a PR when:**
    - `data.linkedPullRequests.nodes.length > 0`
-   - This means Copilot finished initial work
+   - This means Copilot has finished the initial work
    
-   **COPILOT NOT FINISHED when:**
+   **Copilot is not finished when:**
    - `data.linkedPullRequests.nodes.length === 0`
    - Keep monitoring
 
-3. **If NOT FINISHED (no PR yet):**
-   - CREATE NEW 10-MINUTE TIMER
+3. **If not finished (no PR yet):**
+   - Create a new 10-minute timer
    - Use unique names (-2, -3, etc.)
-   - NEVER STOP!
+   - Never stop before completion
 
-4. **If PR EXISTS:**
+4. **If a PR exists:**
    - Proceed to Step 5: Review PR
 
 ### Step 5: PR Review Process
@@ -142,15 +142,15 @@ delivery:
 
 3. **Decision:**
    
-   **If Implementation is GOOD:**
+   **If implementation is good:**
    - Proceed to Step 7: Send Telegram
    
-   **If Implementation needs IMPROVEMENT:**
+   **If implementation needs improvement:**
    - Proceed to Step 6: Provide Feedback
 
 ### Step 6: Provide PR Feedback
 
-**Comment on the PR (NOT the issue):**
+**Comment on the PR (not the issue):**
 
 ```
 operationId: "issues/create-comment"
@@ -161,14 +161,14 @@ parameters:
   body: "@copilot\n\nImplementation review feedback:\n\n1. <Specific issue 1>\n2. <Specific issue 2>\n\nPlease address these points."
 ```
 
-**AFTER FEEDBACK:**
-- SET NEW 10-MINUTE TIMER
+**After providing feedback:**
+- Set a new 10-minute timer
 - Return to Step 4 (monitoring)
 - Continue until implementation is satisfactory
 
-### Step 7: FINAL TELEGRAM NOTIFICATION
+### Step 7: Final Telegram Notification
 
-**Send ONLY when PR is reviewed and implementation is satisfactory:**
+**Send only when the PR is reviewed and the implementation is satisfactory:**
 
 **Method 1: Direct Session Message:**
 ```
@@ -192,43 +192,43 @@ Write to: NOTIFICATION.md
 Content: Issue #<id> ready for review at <timestamp>
 ```
 
-**ENSURE TELEGRAM IS SENT - TRY ALL METHODS!**
+**Try all methods above in order to ensure the Telegram message is sent.**
 
-## MONITORING LOGIC EXAMPLE
+## Monitoring Logic Example
 
 ```
 Every 10-minute check:
 
 if copilot_not_finished:
     create_new_timer(10_minutes)
-    # SILENT check - NO Telegram message!
+    # Silent check — no Telegram message
 else:
-    send_telegram_message()  # ONLY when finished!
+    send_telegram_message()  # Only when finished
 ```
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---|---|
-| Monitor timer stops | Create new `at` timer every 10 min! |
-| Telegram delivery fail | Try ALL methods above! Never give up! |
-| Copilot not active | @copilot mention and assignment check - continue monitoring! |
-| Assignment fails | Try alternative methods but never give up! |
+| Monitor timer stops | Create a new `at` timer every 10 minutes. |
+| Telegram delivery fails | Try all methods listed above in order. |
+| Copilot not active | Verify @copilot mention and assignment, then continue monitoring. |
+| Assignment fails | Try alternative assignment methods and continue. |
 
 ## Safety Guidelines
 
-- NEVER stop monitoring until Copilot is finished
-- ONLY send Telegram message when FINISHED
+- **Never** stop monitoring until Copilot is finished
+- Only send the Telegram message when finished
 - Always include [Auto-Generated] in issue title
 - Always assign Copilot after issue creation
-- Only use `at` scheduling for timers (but create multiple `at` jobs!)
+- Only use `at` scheduling for timers; create multiple sequential `at` jobs as needed
 - Clean up timers after completion
 - Never modify existing issues without user permission
 
-## FINAL REMINDER
+## Final Reminder
 
-**THIS SKILL REQUIRES:**
-1. CONTINUOUS MONITORING - every 10 minutes until finished
-2. TELEGRAM MESSAGE - only when finished
+**This skill requires:**
+1. **Continuous monitoring** — every 10 minutes until finished
+2. **Telegram message** — only when finished
 
-**NEVER GIVE UP! FIND A SOLUTION!**
+**Always persist until a solution is found.**
