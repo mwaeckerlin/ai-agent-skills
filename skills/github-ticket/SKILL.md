@@ -1,327 +1,368 @@
 ---
 name: github-ticket
-description: Automated GitHub issue management with Copilot - create issues, assign to Copilot, continuously monitor until complete, and send Telegram notification only when finished
+description: Automated GitHub project and issue management with Copilot - create projects, create issues, assign to Copilot, continuously monitor, review implementation, and coordinate with user for final merge
 ---
 
-# GitHub Ticket Management
+# GitHub Ticket Skill
 
-Automate GitHub issue management with Copilot integration.
+The skill applies when the user:
+- asks to **check**, **monitor**, or **watch** a PR
+- asks to **check**, **monitor**, or **watch** an Issue
+- asks to **create an Issue** in a project
+- asks to **create a new project**
 
-## Overview
+## Skill Flow
 
-When the user requests issue creation in a specific project:
+The skill follows this state machine:
 
-1. **Initialize project** if it is new (see "New Project Initialization" below)
-2. **Create GitHub issue** with @copilot mention
-3. **Assign Copilot** as assignee (mandatory)
-4. **Start monitoring** — every 10 minutes until complete
-5. **Review implementation** when Copilot completes
-6. **Provide feedback** if improvements are needed
-7. **Send Telegram message** — only when complete
+```plantuml
+[*] --> pr : User asks to\nmonitor a PR
+[*] --> issue : User asks to\ncreate an Issue
+[*] --> check_issue : User asks to\nmonitor an issue
+[*] --> project : User asks to\ncreate a new project
 
-## Mandatory Rules
+state "Project" as project
+project: create a new project with a README
+project: make sure the project is initialized
 
-### Rule 0: Default Repository Owner
+state "Issue" as issue
+issue: create issue according to request
+issue: assign issue to copilot
 
-**If no account/owner is specified, always use the user's own account.**
+state "Timer" as timer
+timer: setup a timer to expire in 10 minutes
 
-- Never guess or infer an owner from the repository name.
-- Example: if the user's account is `YOUR_USERNAME` and the task says "create an issue in `openclaw`", the repository is `YOUR_USERNAME/openclaw` — **not** `openclaw/openclaw` or any other owner.
+state "Load Issue Details" as check_issue
+check_issue: check if PR has been created
 
-### Rule 1: Continuous Monitoring
+project --> issue : create an issue\nto implement the project\naccording to User request
 
-**Set a new 10-minute timer after every check — never stop.**
+issue --> timer
+timer --> pr : timeout and\nPR is known
+timer --> check_issue : timeout and\nPR is unknown
+check_issue --> timer : no PR created yet
+check_issue --> pr : PR created
 
-As long as Copilot is not finished:
-- Create a new 10-minute timer (`at` scheduling)
-- Repeat until Copilot is finished
-- Never stop before completion
+state "Review Process" as rp {
+  state "Load PR Details" as pr
+  pr: Use mcp-github Skill to read PR
 
-### Rule 2: Telegram Message — Only When Finished
+  state "Clone or Pull\nRepository" as pull
+  pull: clone repository (if not locally available)
+  pull: checkout PR branch
+  pull: pull latest changes from origin
 
-**Send a Telegram message only upon completion.**
+  state "Review" as review
+  review: read PR body information
+  review: carefully review code changes
+  review: check for best practices and clean code
+  review: check for security-relevant issues
+  review: review test cases, ask for more tests if necessary
 
-During monitoring:
-- Do not send Telegram messages during intermediate checks
-- Perform a silent check and continue monitoring
+  state "Test" as test
+  test: run all test cases
+  test: standard is npm run test if package.json present
+  test: reject if npm run test does not run all tests
 
-When finished (all of the following must be true):
-- ✅ A PR linked to the issue exists
-- ✅ Copilot has left at least one new comment on the PR explaining what was done and how
-- ✅ Implementation has been reviewed
-- 📱 Send Telegram message
+  state "Reject" as reject
+  reject: reject review with comment
+  reject: describe the problem to be fixed
+  reject: mention @copilot
 
-**Note:** Draft status of an issue or PR is **not** a completion criterion. A draft PR still counts as a valid PR for monitoring purposes.
+  state "Accept" as accept
+  accept: write review comment: "looks good to me"
+  accept: do not formally "accept", do not "reject"
 
-## Copilot Task Status Definitions
+  state "Notification" as notify
+  notify: send message to User that process is finished
+  notify: add link to PR in message
+  notify: wait for user response
 
-**CRITICAL:** Understand when Copilot tasks are actually finished:
+  state "Accepted" as accepted
+  accepted: accept the PR review
+  accepted: merge PR
+  accepted: delete branch
 
-- **FINISHED** = PR exists and is mergeable (`mergeable_state: "clean"`)
-- **READY FOR REVIEW** = Same as FINISHED - draft status is irrelevant
-- **NOT FINISHED** = No PR yet OR PR has conflicts/issues (`mergeable_state` != "clean")
+  pr --> pull : requested_reviewers not empty\nor\nrequested_teams not empty
+  pr --> timer : requested_reviewers is empty\nand\nrequested_teams is empty
+  pull --> review
+  review --> test : review passed
+  review --> reject : issues found
+  test --> accept : tests pass\nand mergeable_state == "clean"
+  test --> reject : tests fail
+  test --> reject : tests pass but\nmergeable_state != "clean"\nask to cleanup
+  reject --> timer
+  accept --> notify
+  notify --> reject : negative user response\nwith reason to reject
+  notify --> accepted : positive user response\nsuch as "accept" or "merge"
+}
 
-**Status checking workflow:**
-1. Check if PR exists for the task
-2. If PR exists, check `mergeable_state` field
-3. If `clean` = FINISHED (ignore `draft: true` and `merged: false`)
-4. If conflicts/issues = NOT FINISHED
+pr --> [*] : state == "closed"\nor merged == true
+accepted --> [*]
+```
 
-**Common mistakes to avoid:**
-- ❌ Thinking `"draft": true` means "not finished"
-- ❌ Thinking `"merged": false` means "not finished"
-- ❌ Waiting for "ready for review" status changes
-- ✅ Only check: PR exists + mergeable_state clean = FINISHED
+## State Descriptions
 
-**Repository creation guidance:**
-- **Problem:** Empty repositories (no base branch) cannot be used by Copilot
-- **Solution:** Always initialize repositories with content OR pass Copilot task during creation
-- Never create empty repository first, then assign Copilot separately
+### Project
 
-## Prerequisites
+When the user asks to create a new project:
 
-Required tools and capabilities:
-- `mcp-github` skill for GitHub operations
-- `openclaw-mcp-gateway` for cron job management
-- Telegram integration (must be configured and operational)
+1. Create the repository with a `README.md` so it is properly initialized (empty repositories cannot be used by Copilot).
+2. Proceed to the **Issue** state to create an implementation issue.
 
-## Workflow
+```
+operationId: "repos/create-for-authenticated-user"
+parameters:
+  name: "<repo-name>"
+  description: "<project description>"
+  auto_init: true
+```
 
-### Step 0: New Project Initialization
+> **Note:** If no account/owner is specified, always use the user's own account. Never guess or infer an owner from the repository name.
 
-**If the task involves a new (empty) repository that has not been initialized yet:**
+### Issue
 
-**Preferred method — assign directly to Copilot via the issue:**
+Create a GitHub issue and assign it to Copilot:
 
-Create the issue with an initialization task description and assign Copilot directly. This is more efficient than first generating files manually and then creating a ticket.
+1. **Create the issue** — include a detailed description and acceptance criteria. Always mention `@copilot` in the body:
 
 ```
 operationId: "issues/create"
 parameters:
-  owner: "<user-account>"
-  repo: "<repo-name>"
-  title: "[Auto-Generated] Initialize project"
-  body: "@copilot\n\nPlease initialize this repository:\n\n<Description of the project and required setup>\n\nAt minimum, create a README.md and any other standard project scaffolding."
-  labels: ["automated", "copilot"]
-```
-
-Then assign Copilot as described in Step 2 and continue with the normal workflow.
-
-**Fallback method — generate README.md manually:**
-
-Only use this if the preferred method is not applicable. Create a minimal `README.md` directly via the API to initialize the repository before creating further issues.
-
----
-
-### Step 1: Create Issue
-
-Use `github_issues_rest`:
-
-```
-operationId: "issues/create"
-parameters:
-  owner: "repo-owner"
-  repo: "repo-name"
+  owner: "<owner>"
+  repo: "<repo>"
   title: "[Auto-Generated] <Issue Title>"
-  body: "@copilot \n\n<Detailed description>\n\n<Requirements and acceptance criteria>"
+  body: "@copilot\n\n<Detailed description>\n\n<Requirements and acceptance criteria>"
   labels: ["automated", "copilot"]
 ```
 
-### Step 2: Assign Copilot (mandatory)
-
-**Important:** @copilot mention alone is not enough — you must also assign Copilot as an assignee:
+2. **Assign Copilot** as assignee — the `@copilot` mention alone is not enough:
 
 ```
 operationId: "issues/add-assignees"
 parameters:
-  owner: "repo-owner"
-  repo: "repo-name"
+  owner: "<owner>"
+  repo: "<repo>"
   issue_number: <issue-id>
   assignees: ["copilot"]
 ```
 
-### Step 3: Start Monitoring (silent)
+3. Proceed to the **Timer** state.
 
-**First 10-minute timer:**
+### Timer
+
+Set up a timer to expire in 10 minutes, then re-enter the state machine:
 
 ```
-name: "copilot-monitor-<issue-id>-1" # Unique name
+name: "copilot-monitor-<issue-id>-<sequence>" # unique name per check
 schedule:
   kind: "at"
-  at: "<current_datetime + 10 minutes>"  # 10 minutes from now
+  at: "<now + 10 minutes>"
 sessionTarget: "isolated"
 wakeMode: "now"
 payload:
   kind: "agentTurn"
-  message: "Check Copilot status for issue #<issue-id>. Perform a silent status check — do not send any Telegram notification."
+  message: "Check Copilot status for issue #<issue-id> in <owner>/<repo>. Continue the github-ticket skill state machine."
 delivery:
-  mode: "none"  # No Telegram message
+  mode: "none"
 ```
 
-### Step 4: Monitoring Logic
+### Load Issue Details (check_issue)
 
-**In every monitoring check:**
+When monitoring an issue (no PR known yet):
 
-1. **Check Issue Status with issues/get API:**
-   ```
-   operationId: "issues/get"
-   parameters: { owner, repo, issue_number }
-   ```
+1. Load the issue details using the `mcp-github` skill.
+2. Search for any PR that references this issue (e.g. via `closes #<issue-id>` in the PR body or via linked PRs).
+3. **If a PR has been created** → proceed to **Load PR Details**.
+4. **If no PR exists yet** → proceed to **Timer** and re-check later.
 
-2. **Determine Copilot Status:**
-   
-   **Copilot has finished when ALL of the following are true:**
-   - A PR linked to the issue exists (`data.linkedPullRequests.nodes.length > 0`)
-   - Copilot has left at least one new comment on the PR explaining what was done and how
-   
-   **Draft status is NOT a criterion** — a draft PR still counts as a valid PR.
-   
-   **Copilot is not finished when:**
-   - No linked PR exists (`data.linkedPullRequests.nodes.length === 0`), **or**
-   - A PR exists but Copilot has not yet left an explanatory comment on it
-   - Keep monitoring
+### Load PR Details (pr)
 
-3. **If a PR exists, check for Copilot's comment:**
-   ```
-   operationId: "issues/list-comments"
-   parameters: { owner, repo, issue_number: <PR number> }
-   ```
-   - Look for a comment by `copilot` (or `github-copilot[bot]`) that explains what was done and how.
-   - If no such comment exists yet, Copilot is not finished — create a new 10-minute timer.
-
-4. **If not finished (no PR yet, or PR exists but no Copilot comment):**
-   - Create a new 10-minute timer
-   - Use unique names (-2, -3, etc.)
-   - Never stop before completion
-
-5. **If a PR exists and Copilot has left an explanatory comment:**
-   - Proceed to Step 5: Review PR
-
-### Step 5: PR Review Process
-
-**When linkedPullRequests.nodes.length > 0:**
-
-1. **Get PR Details:**
-   ```
-   Get first PR from linkedPullRequests.nodes[0]
-   PR number: data.linkedPullRequests.nodes[0].number
-   ```
-
-2. **Review PR Implementation:**
-   - Check code quality
-   - Verify requirements met
-   - Assess completeness
-
-3. **Decision:**
-   
-   **If implementation is good:**
-   - Proceed to Step 5.5: Write Approval Comment
-   - THEN proceed to Step 7: Send Telegram
-   
-   **If implementation needs improvement:**
-   - Proceed to Step 6: Provide Feedback
-
-### Step 5.5: Write Approval Comment (MANDATORY!)
-
-**CRITICAL: This MUST be done BEFORE sending Telegram!**
-
-**Comment on the PR without @copilot mention:**
+Read the current PR state using the `mcp-github` skill:
 
 ```
-operationId: "issues/create-comment"
+operationId: "pulls/get"
 parameters:
-  owner: <owner>
-  repo: <repo>
-  issue_number: <PR number>
-  body: "**Implementation Review Complete**\n\nReviewed components:\n- Code quality: <assessment>\n- Requirements: <assessment>\n- Tests: <assessment>\n\nReady for merge."
+  owner: "<owner>"
+  repo: "<repo>"
+  pull_number: <pr-number>
 ```
 
-**VERIFY the comment was posted successfully.**
-**If comment fails: DO NOT proceed to Step 7. Retry or notify user.**
+**Terminal check — evaluate first:**
+If `state === "closed"` OR `merged === true` → **process is finished**. Stop all timers. Do nothing else. This is the exit point.
 
-### Step 6: Provide PR Feedback
+**Reviewer check:**
+- If `requested_reviewers` is non-empty OR `requested_teams` is non-empty → proceed to **Clone or Pull Repository**.
+- Otherwise → proceed to **Timer** (Copilot has not yet requested a review).
 
-**Comment on the PR (not the issue):**
+### Clone or Pull Repository (pull)
+
+Before reviewing, get the latest code locally:
+
+1. If the repository is not yet cloned locally, clone it.
+2. Check out the PR branch.
+3. Pull the latest changes from origin.
+
+```bash
+git clone https://github.com/<owner>/<repo>.git   # if not yet cloned
+cd <repo>
+git fetch origin
+git checkout <pr-branch>
+git pull origin <pr-branch>
+```
+
+Proceed to **Review**.
+
+### Review
+
+Perform a thorough code review:
+
+1. **Read the PR body** (`body` field) — Copilot leaves information about its tasks, implementation decisions, and reasons here.
+2. **Review the code changes** carefully — check every changed file.
+3. **Check for best practices and clean code** — naming, structure, readability, maintainability.
+4. **Check for security-relevant issues** — input validation, authentication, injection risks, secrets in code, etc.
+5. **Review the test cases** — check coverage and quality; ask for more tests if necessary.
+
+**If the review finds issues** → proceed to **Reject**, describing every problem found.
+
+**If the review passes** → proceed to **Test**.
+
+### Test
+
+Run the project's test suite against the checked-out PR branch:
+
+- Standard: run `npm run test` if a `package.json` is present.
+- If `npm run test` exists but does not run all tests, treat this as a failure and request fixes.
+- Adapt to the project's tooling as appropriate (e.g. `make test`, `pytest`, `go test ./...`).
+
+**If tests fail** → proceed to **Reject**, describing the failing tests.
+
+**If tests pass but `mergeable_state !== "clean"`** → proceed to **Reject**, asking to fix mergeability (resolve conflicts, fix CI, rebase, etc.).
+
+**If tests pass and `mergeable_state === "clean"`** → proceed to **Accept**.
+
+> **Note:** `mergeable_state` may be `"unknown"` immediately after a push while GitHub computes it. If `"unknown"`, proceed to **Timer** and re-check later.
+
+### Reject
+
+Submit a `REQUEST_CHANGES` review, describing exactly what Copilot must fix:
 
 ```
-operationId: "issues/create-comment"
+operationId: "pulls/create-review"
 parameters:
-  owner: <owner>
-  repo: <repo>
-  issue_number: <PR number>
-  body: "@copilot\n\nImplementation review feedback:\n\n1. <Specific issue 1>\n2. <Specific issue 2>\n\nPlease address these points."
+  owner: "<owner>"
+  repo: "<repo>"
+  pull_number: <pr-number>
+  event: "REQUEST_CHANGES"
+  body: |
+    <Exact description of every issue found.>
+
+    @copilot please fix the above issues.
 ```
 
-**After providing feedback:**
-- Set a new 10-minute timer
-- Return to Step 4 (monitoring)
-- Continue until implementation is satisfactory
+Proceed to **Timer** to re-check after 10 minutes.
 
-### Step 7: Final Telegram Notification
+### Accept
 
-**Send ONLY after Step 5.5 (Approval Comment) is complete:**
+The review and tests have passed. Leave a comment — **do not formally approve, do not reject**:
 
-**CRITICAL: Do NOT send Telegram if approval comment was not posted!**
+```
+operationId: "pulls/create-review"
+parameters:
+  owner: "<owner>"
+  repo: "<repo>"
+  pull_number: <pr-number>
+  event: "COMMENT"
+  body: "looks good to me\n\n<Summary of findings / what was checked>"
+```
 
-**Method 1: Direct Session Message:**
+Proceed to **Notification**.
+
+### Notification
+
+Inform the user that the PR is ready and wait for their decision:
+
+Send a Telegram message including the PR URL:
+
 ```
 sessions_send(
-  sessionKey: "agent:main:telegram:direct:1196751676",
-  message: "✅ GitHub Issue READY for your review!\n\nProject: <owner>/<repo>\nIssue: #<issue-id> - <title>\nPR: #<pr-number>\n\nCopilot implementation reviewed and approved.\nReady for your final review and merge!"
+  sessionKey: "agent:main:telegram:direct:<user-id>",
+  message: "✅ PR ready for your review!\n\nProject: <owner>/<repo>\nPR: #<pr-number> — <title>\nURL: <pr_html_url>\n\nCode reviewed and tests pass. Looks good to me.\n\nReply 'accept' or 'merge' to merge, or describe what should be changed."
 )
 ```
 
-**Method 2: Spawn if Method 1 fails:**
-```
-sessions_spawn(
-  mode: "run",
-  task: "Send Telegram: Issue <issue-id> ready for review"
-)
-```
+**Wait for user response:**
+- **Positive response** (e.g. "accept", "merge", "yes", "looks good") → proceed to **Accepted**.
+- **Negative response with reason** → proceed to **Reject**, using the user's feedback as the rejection comment.
 
-**Method 3: Write notification file:**
-```
-Write to: NOTIFICATION.md
-Content: Issue #<id> ready for review at <timestamp>
-```
+### Accepted
 
-**Try all methods above in order to ensure the Telegram message is sent.**
+The user has approved. Finalize the PR:
 
-## Monitoring Logic Example
+1. **Accept the PR review** (formally approve):
 
 ```
-Every 10-minute check:
-
-if copilot_not_finished:
-    create_new_timer(10_minutes)
-    # Silent check — no Telegram message
-else:
-    send_telegram_message()  # Only when finished
+operationId: "pulls/create-review"
+parameters:
+  owner: "<owner>"
+  repo: "<repo>"
+  pull_number: <pr-number>
+  event: "APPROVE"
+  body: "Approved as requested by user."
 ```
 
-## Troubleshooting
+2. **Merge the PR:**
 
-| Problem | Solution |
-|---|---|
-| Monitor timer stops | Create a new `at` timer every 10 minutes. |
-| Telegram delivery fails | Try all methods listed above in order. |
-| Copilot not active | Verify @copilot mention and assignment, then continue monitoring. |
-| Assignment fails | Try alternative assignment methods and continue. |
+```
+operationId: "pulls/merge"
+parameters:
+  owner: "<owner>"
+  repo: "<repo>"
+  pull_number: <pr-number>
+  merge_method: "squash"
+```
+
+3. **Delete the branch:**
+
+```
+operationId: "git/delete-ref"
+parameters:
+  owner: "<owner>"
+  repo: "<repo>"
+  ref: "heads/<pr-branch>"
+```
+
+Process is complete. **→ [*]** (terminal state)
+
+## Available GitHub PR State Fields
+
+When evaluating a PR, the following fields are available:
+
+| Field | Type | Values / Notes |
+|---|---|---|
+| `draft` | boolean | `true` = PR created as draft. Not a reliable signal of Copilot completion — treat as informational only. |
+| `state` | string | `"open"`, `"closed"` |
+| `merged` | boolean | `true` = already merged |
+| `mergeable` | boolean/null | `true` = no conflicts, `false` = has conflicts, `null` = not yet computed |
+| `mergeable_state` | string | `"clean"` (ready), `"dirty"` (conflicts), `"blocked"` (checks/approvals missing), `"behind"` (branch behind base), `"unstable"` (checks failed/pending), `"unknown"` (not yet determined) |
+| `requested_reviewers` | array | reviewers not yet responded |
+| `requested_teams` | array | teams not yet responded |
+| `body` | string/null | PR description (Copilot summarises its work here) |
+| `head.sha` | string | latest commit SHA on the PR branch |
+
+## Error Handling
+
+If any step cannot be completed (e.g. API error, test runner unavailable, unable to post a review):
+
+- Increment the **error counter** for this monitoring cycle.
+- Set a new 10-minute timer to retry later.
+- After **3 consecutive errors**, post a Telegram message explaining the problem and the step that failed, so the user can investigate.
+- Reset the error counter after a successful check.
 
 ## Safety Guidelines
 
-- **Never** stop monitoring until Copilot is finished
-- Only send the Telegram message when finished
-- Always include [Auto-Generated] in issue title
-- Always assign Copilot after issue creation
-- Only use `at` scheduling for timers; create multiple sequential `at` jobs as needed
-- Clean up timers after completion
-- Never modify existing issues without user permission
-
-## Final Reminder
-
-**This skill requires:**
-1. **Continuous monitoring** — every 10 minutes until finished
-2. **Telegram message** — only when finished
-
-**Always persist until a solution is found.**
+- Always include `[Auto-Generated]` in the issue title.
+- Always assign Copilot after issue creation — a `@copilot` mention alone is not enough.
+- Use only `at` scheduling for timers.
+- Never modify existing issues without user permission.
+- Never stop the monitoring loop until the process reaches a terminal state (`[*]`).
