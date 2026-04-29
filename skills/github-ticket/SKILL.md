@@ -26,7 +26,7 @@ When the user requests issue creation in a specific project:
 **If no account/owner is specified, always use the user's own account.**
 
 - Never guess or infer an owner from the repository name.
-- Example: if the user's account is `mwaeckerlin` and the task says "create an issue in `openclaw`", the repository is `mwaeckerlin/openclaw` — **not** `openclaw/openclaw` or any other owner.
+- Example: if the user's account is `YOUR_USERNAME` and the task says "create an issue in `openclaw`", the repository is `YOUR_USERNAME/openclaw` — **not** `openclaw/openclaw` or any other owner.
 
 ### Rule 1: Continuous Monitoring
 
