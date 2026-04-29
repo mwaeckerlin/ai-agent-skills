@@ -53,6 +53,31 @@ When finished (all of the following must be true):
 
 **Note:** Draft status of an issue or PR is **not** a completion criterion. A draft PR still counts as a valid PR for monitoring purposes.
 
+## Copilot Task Status Definitions
+
+**CRITICAL:** Understand when Copilot tasks are actually finished:
+
+- **FINISHED** = PR exists and is mergeable (`mergeable_state: "clean"`)
+- **READY FOR REVIEW** = Same as FINISHED - draft status is irrelevant
+- **NOT FINISHED** = No PR yet OR PR has conflicts/issues (`mergeable_state` != "clean")
+
+**Status checking workflow:**
+1. Check if PR exists for the task
+2. If PR exists, check `mergeable_state` field
+3. If `clean` = FINISHED (ignore `draft: true` and `merged: false`)
+4. If conflicts/issues = NOT FINISHED
+
+**Common mistakes to avoid:**
+- ❌ Thinking `"draft": true` means "not finished"
+- ❌ Thinking `"merged": false` means "not finished"
+- ❌ Waiting for "ready for review" status changes
+- ✅ Only check: PR exists + mergeable_state clean = FINISHED
+
+**Repository creation guidance:**
+- **Problem:** Empty repositories (no base branch) cannot be used by Copilot
+- **Solution:** Always initialize repositories with content OR pass Copilot task during creation
+- Never create empty repository first, then assign Copilot separately
+
 ## Prerequisites
 
 Required tools and capabilities:
