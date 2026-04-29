@@ -68,6 +68,11 @@ When evaluating a PR, the following fields are available and should be considere
 | `auto_merge` | object/null | non-null if auto-merge is enabled |
 | `requested_reviewers` | array | reviewers not yet responded |
 | `requested_teams` | array | teams not yet responded |
+| `labels` | array | labels attached to the PR (may be empty) |
+| `body` | string/null | PR description body (Copilot typically summarises its work here) |
+| `commits` | number | number of commits on the PR branch |
+| `changed_files` | number | number of files changed |
+| `updated_at` | string (ISO 8601) | timestamp of the last update (push, comment, etc.) — useful for detecting recent Copilot activity |
 | `head.sha` | string | latest commit SHA on the PR branch |
 | `statuses_url` | string | URL to query combined commit status (CI) |
 
