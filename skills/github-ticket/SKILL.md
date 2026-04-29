@@ -46,9 +46,7 @@ During monitoring:
 - Perform a silent check and continue monitoring
 
 When finished (`state === "closed"` OR `merged === true`):
-- ✅ Send Telegram message (already sent when review was left open in step 6 above)
-
-**Note:** Copilot may leave the PR in `draft: true` state even after finishing its work. **Do not use `draft` as a completion criterion.** A draft PR is still a valid completed PR for monitoring purposes.
+- ✅ Process is finished. Stop all timers. Do nothing else. This is the exit point.
 
 ## Available GitHub PR State Fields
 
@@ -91,18 +89,18 @@ This is the **one and only finish criterion**. Once reached, cancel all timers a
 
 When this condition is met, perform the following review steps **in order**:
 
-1. **Read the PR body** (`body` field) carefully.
-2. **Review the ticket** — check the implementation against the issue requirements.
-3. **Run all tests** — execute the project's test suite.
-4. **If issues are found or tests fail:**
+1. **Read the PR body** (`body` field) carefully. Copilot leaves information about its tasks, implementation decisions, and reasons here.
+2. **Review the ticket** — check the implementation against the issue requirements. Check for best practices and clean code. Check for security-relevant issues. Review the test cases; ask for more tests if necessary.
+3. **Run all tests** — execute the project's test suite. Standard: run `npm run test` if a `package.json` is present; reject if `npm run test` does not run all tests. Adapt to the project's tooling (e.g. `make test`, `pytest`, etc.) as appropriate.
+4. **If issues are found, review comments are needed, or tests fail:**
    - Submit a review with **Reject** (request changes).
    - Add a comment describing exactly what needs to be fixed.
    - Set a new 10-minute timer and re-check later.
-5. **If tests pass but `!mergeable || mergeable_state !== "clean"`:**
+5. **If tests and review pass but `!mergeable || mergeable_state !== "clean"`:**
    - Submit a review with **Reject** (request changes).
    - Add a comment asking to make the branch mergeable (resolve conflicts, fix CI, rebase, etc.).
    - Set a new 10-minute timer and re-check later.
-6. **If tests pass AND `mergeable === true` AND `mergeable_state === "clean"`:**
+6. **If tests and review pass AND `mergeable === true` AND `mergeable_state === "clean"`:**
    - Do **not** reject, do **not** approve.
    - Leave the review **open** with a comment: _"looks like ready to merge"_ plus your findings (do not say "ready to merge" — that is the user's decision).
    - Post a Telegram message that the PR is ready for the user to review, **including the PR URL**.
@@ -114,6 +112,15 @@ When this condition is met, perform the following review steps **in order**:
 
 If no PR exists yet, or the PR exists but `requested_reviewers` and `requested_teams` are both empty (Copilot has not requested a review yet):
 - Set a new 10-minute timer and re-check later. No action, no Telegram message.
+
+### Error Handling
+
+If any step cannot be completed (e.g. API error, test runner unavailable, unable to post a review):
+
+- Increment the **error counter** for this monitoring cycle.
+- Set a new 10-minute timer to retry later.
+- After **3 consecutive errors**, post a Telegram message explaining the problem and the step that failed, so the user can investigate.
+- Reset the error counter after a successful check.
 
 **Repository creation guidance:**
 - **Problem:** Empty repositories (no base branch) cannot be used by Copilot
@@ -287,29 +294,38 @@ No PR exists yet, or PR exists but both `requested_reviewers` and `requested_tea
 ```
 Every 10-minute check:
 
-# COMPLETED — terminal state, stop all timers
+# COMPLETED — terminal state, stop everything, exit
 if state == "closed" or merged == true:
     stop_all_timers()
-    return
+    return  # Done. Nothing else.
 
 # REVIEW REQUESTED — Copilot handed off to reviewer
 elif requested_reviewers or requested_teams:
-    read_pr_body()
-    review_ticket_requirements()
-    run_all_tests()
+    try:
+        body = read_pr_body()          # Copilot describes tasks and reasons here
+        review_ticket_requirements()   # best practices, clean code, security
+        review_test_cases()            # ask for more tests if necessary
+        run_all_tests()                # e.g. `npm run test` if package.json exists
 
-    if issues_found or tests_failed:
-        submit_review(verdict="reject", comment="<what needs to be fixed>")
+        if issues_found or tests_failed or review_comments:
+            submit_review(verdict="reject", comment="<what needs to be fixed>")
+
+        elif not mergeable or mergeable_state != "clean":
+            submit_review(verdict="reject", comment="<make the branch mergeable>")
+
+        else:
+            # Do NOT approve, do NOT reject — leave review open
+            post_review_comment("looks like ready to merge\n\n<findings>")
+            send_telegram("PR is ready for your review: <PR URL>")
+
+        error_counter = 0
         create_new_timer(10_minutes)
 
-    elif not mergeable or mergeable_state != "clean":
-        submit_review(verdict="reject", comment="<make the branch mergeable>")
-        create_new_timer(10_minutes)
-
-    else:
-        # Do NOT approve, do NOT reject — leave review open
-        post_review_comment("looks like ready to merge\n\n<findings>")
-        send_telegram("PR is ready for your review: <PR URL>")
+    except Exception as e:
+        error_counter += 1
+        if error_counter >= 3:
+            send_telegram("Error after 3 attempts: <step> failed — <reason>")
+            error_counter = 0
         create_new_timer(10_minutes)
 
 # WAITING — no PR yet, or reviewer not yet assigned
