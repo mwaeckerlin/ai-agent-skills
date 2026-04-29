@@ -51,7 +51,7 @@ When finished (all of the following must be true):
 - ✅ Implementation has been reviewed
 - 📱 Send Telegram message
 
-**Note:** A draft PR (`draft: true`) is **not** considered ready for review. Only when Copilot explicitly marks the PR as ready for review (`draft: false`) does monitoring move forward to check `mergeable_state`.
+**Note:** Copilot may leave the PR in `draft: true` state even after finishing its work. **Do not use `draft` as a completion criterion.** A draft PR is still a valid completed PR for monitoring purposes.
 
 ## Available GitHub PR State Fields
 
@@ -59,7 +59,7 @@ When evaluating a PR, the following fields are available and should be considere
 
 | Field | Type | Values / Notes |
 |---|---|---|
-| `draft` | boolean | `true` = draft (work in progress), `false` = ready for review |
+| `draft` | boolean | `true` = PR created as draft; `false` = explicitly marked ready for review. **Not a reliable signal of Copilot completion** — Copilot may finish work while `draft` is still `true`. Treat as informational only. |
 | `state` | string | `"open"`, `"closed"` |
 | `merged` | boolean | `true` = already merged |
 | `mergeable` | boolean/null | `true` = no conflicts, `false` = has conflicts, `null` = not yet computed |
@@ -77,16 +77,15 @@ When evaluating a PR, the following fields are available and should be considere
 
 **CRITICAL:** Understand when Copilot tasks are actually finished:
 
-- **READY FOR REVIEW** = PR exists AND `draft: false` AND `state: "open"`
+- **READY FOR REVIEW** = PR exists AND `state: "open"` (regardless of `draft` value)
 - **FINISHED** = READY FOR REVIEW AND `mergeable_state: "clean"`
 - **NEEDS CLEANUP** = READY FOR REVIEW AND `mergeable_state` is NOT `"clean"` (e.g. `"dirty"`, `"blocked"`, `"behind"`, `"unstable"`)
-- **NOT FINISHED** = No PR exists yet, OR PR is still a draft (`draft: true`)
+- **NOT FINISHED** = No PR exists yet
 
 **Status checking workflow:**
 1. Check if a PR linked to the issue exists
 2. If no PR → NOT FINISHED, keep monitoring
-3. If PR exists and `draft: true` → NOT FINISHED, keep monitoring
-4. If PR exists and `draft: false` and `state: "open"`:
+3. If PR exists and `state: "open"` (ignore `draft` value):
    a. If `mergeable_state: "clean"` → **FINISHED**
    b. If `mergeable_state` is `"unknown"` → wait and re-check (GitHub is still computing); after **5 consecutive unknown checks** (~10 minutes), treat as NEEDS CLEANUP and post @copilot comment
    c. Otherwise → **NEEDS CLEANUP** — post @copilot comment (see Step 4b below) and keep monitoring
@@ -94,8 +93,8 @@ When evaluating a PR, the following fields are available and should be considere
 **Common mistakes to avoid:**
 - ❌ Using `mergeable_state: "clean"` as the *only* criterion — it may be `"unknown"` right after a push
 - ❌ Thinking `"merged": false` means "not finished" — an unmerged PR can still be ready
-- ❌ Skipping the `draft` check — a draft PR is explicitly *not* ready for review
-- ✅ READY FOR REVIEW = `draft: false` + `state: "open"`
+- ❌ Using `"draft": true` as "not finished" — Copilot finishes work while the PR is still a draft
+- ✅ READY FOR REVIEW = PR exists + `state: "open"` (draft is irrelevant)
 - ✅ FINISHED = READY FOR REVIEW + `mergeable_state: "clean"`
 
 **Repository creation guidance:**
@@ -198,15 +197,12 @@ delivery:
    **Step 2a — PR exists?**
    - If `data.linkedPullRequests.nodes.length === 0` → NOT FINISHED, create new timer and stop here.
 
-   **Step 2b — Is PR a draft?**
-   - If `draft: true` → NOT FINISHED, create new timer and stop here.
-
-   **Step 2c — PR is READY FOR REVIEW (`draft: false`, `state: "open"`). Check mergeable state:**
+   **Step 2b — PR is open. Check mergeable state** (ignore `draft` value):
    - `mergeable_state: "clean"` → **FINISHED**, proceed to check Copilot comment
    - `mergeable_state: "unknown"` → GitHub is still computing; create a 2-minute timer and recheck (up to 5 retries; if still unknown after 5 retries, treat as NEEDS CLEANUP)
    - Any other value (`"dirty"`, `"blocked"`, `"behind"`, `"unstable"`) → **NEEDS CLEANUP** — run Step 4b
 
-3. **If a PR exists and is READY FOR REVIEW and FINISHED, check for Copilot's comment:**
+3. **If a PR exists and FINISHED, check for Copilot's comment:**
    ```
    operationId: "issues/list-comments"
    parameters: { owner, repo, issue_number: <PR number> }
@@ -214,7 +210,7 @@ delivery:
    - Look for a comment by `copilot` (or `github-copilot[bot]`) that explains what was done and how.
    - If no such comment exists yet, Copilot is not finished — create a new 10-minute timer.
 
-4. **If not finished (no PR yet, or PR is draft, or PR exists but no Copilot comment):**
+4. **If not finished (no PR yet, or PR exists but no Copilot comment):**
    - Create a new 10-minute timer
    - Use unique names (-2, -3, etc.)
    - Never stop before completion
